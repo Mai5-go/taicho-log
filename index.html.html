@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="体調LOG">
+<meta name="theme-color" content="#E8002D">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>体調LOG</title>
+
+<style>
+:root {
+  --red:#E8002D; --dark:#0A0A0A; --card:#111; --border:#222;
+  --muted:#555; --text:#F0F0F0; --accent:#FFD700;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--dark);color:var(--text);font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;min-height:100vh;padding-bottom:70px;}
+
+.header{background:var(--red);padding:14px 16px 10px;text-align:center;}
+.header h1{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:26px;letter-spacing:4px;color:white;}
+.day-badge{display:inline-block;background:rgba(0,0,0,0.3);color:white;font-size:11px;padding:3px 12px;border-radius:20px;margin-top:3px;cursor:pointer;}
+.date-nav{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px;}
+.date-nav button{background:rgba(255,255,255,0.2);border:none;color:white;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.date-nav button:active{background:rgba(255,255,255,0.4);}
+.date-label{color:white;font-size:13px;font-weight:700;min-width:110px;text-align:center;}
+.today-indicator{font-size:10px;color:var(--accent);text-align:center;margin-top:2px;display:none;}
+
+.tab-bar{display:flex;background:#050505;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;overflow-x:auto;}
+.tab-btn{flex:0 0 auto;padding:11px 10px;background:none;border:none;color:var(--muted);font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;font-size:10px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+.tab-content{display:none;padding:12px;}
+.tab-content.active{display:block;}
+
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+.section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px;}
+.time-btn{background:#1A1A1A;border:1px solid var(--border);color:var(--text);padding:8px 2px;border-radius:8px;font-size:12px;cursor:pointer;transition:all 0.15s;font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;}
+.time-btn.selected{background:var(--red);border-color:var(--red);color:white;}
+
+.toggle-grid{display:flex;flex-wrap:wrap;gap:7px;}
+.toggle-btn{background:#1A1A1A;border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.15s;font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;}
+.toggle-btn.selected{background:var(--red);border-color:var(--red);color:white;}
+
+.water-total{text-align:center;padding:8px 0 4px;}
+.water-big{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:48px;color:#42A5F5;line-height:1;}
+.water-big span{font-size:18px;color:var(--muted);}
+.water-btn-row{display:flex;gap:7px;margin-top:10px;}
+.water-add-btn{flex:1;padding:12px 3px;border-radius:12px;border:2px solid #42A5F5;background:rgba(66,165,245,0.1);color:#42A5F5;font-size:14px;font-family:'Bebas Neue','Arial Black',sans-serif;letter-spacing:1px;cursor:pointer;transition:all 0.15s;}
+.water-add-btn:active{background:rgba(66,165,245,0.3);}
+
+.chip-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.chip{border-radius:12px;padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px;}
+.chip button{background:none;border:none;color:#555;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;}
+.water-chip{background:#0D2A3D;border:1px solid #1A4A6A;color:#42A5F5;}
+.tsuji-chip{background:#1A2D0A;border:1px solid #2A4A10;color:#8BC34A;}
+.walk-chip{background:#2A1A00;border:1px solid #4A3000;color:#FF9800;}
+.ex-chip{background:#1A1A2A;border:1px solid #2A2A4A;color:#9C27B0;}
+.study-chip{background:#0D1A2A;border:1px solid #1A2A4A;color:#64B5F6;}
+.video-chip{background:#2A0D2A;border:1px solid #4A1A4A;color:#CE93D8;}
+.blog-chip{background:#1A2A0D;border:1px solid #2A4A1A;color:#A5D6A7;}
+
+.action-btn{width:100%;padding:14px;border-radius:12px;font-size:16px;font-family:'Bebas Neue','Arial Black',sans-serif;letter-spacing:2px;cursor:pointer;margin-bottom:10px;transition:all 0.15s;}
+.action-btn:active{opacity:0.75;transform:scale(0.98);}
+.btn-green{border:2px solid #8BC34A;background:rgba(139,195,74,0.1);color:#8BC34A;}
+.btn-orange{border:2px solid #FF9800;background:rgba(255,152,0,0.1);color:#FF9800;}
+
+.big-count{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:28px;text-align:center;margin-bottom:4px;}
+.count-green{color:#8BC34A;}
+.count-orange{color:#FF9800;}
+.count-purple{color:#9C27B0;}
+.count-blue{color:#64B5F6;}
+
+.walk-btn-row{display:flex;gap:7px;margin-bottom:10px;}
+.walk-min-btn{flex:1;padding:12px 3px;border-radius:12px;border:2px solid #FF9800;background:rgba(255,152,0,0.1);color:#FF9800;font-size:14px;font-family:'Bebas Neue','Arial Black',sans-serif;cursor:pointer;transition:all 0.15s;}
+.walk-min-btn:active{background:rgba(255,152,0,0.3);}
+
+/* STUDY / ACTIVITY ROWS */
+.activity-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:#0D0D0D;border-radius:10px;border:1px solid var(--border);}
+.activity-label{flex:1;font-size:12px;color:var(--text);}
+.activity-total{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:20px;color:#64B5F6;min-width:50px;text-align:right;}
+.activity-unit{font-size:10px;color:var(--muted);}
+.add30-btn{background:#1A2A3A;border:1px solid #2A4A6A;color:#64B5F6;padding:8px 12px;border-radius:10px;font-size:13px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;}
+.add30-btn:active{background:#2A4A6A;}
+
+.star-row{display:flex;gap:8px;justify-content:center;padding:6px 0;}
+.star{font-size:28px;cursor:pointer;opacity:0.3;transition:all 0.15s;filter:grayscale(100%);}
+.star.active{opacity:1;filter:none;}
+
+textarea{width:100%;background:#1A1A1A;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;font-size:13px;resize:vertical;min-height:80px;}
+textarea::placeholder{color:var(--muted);}
+textarea:focus{outline:none;border-color:var(--red);}
+
+.weight-diff{font-size:13px;margin-top:4px;text-align:center;}
+.weight-diff.good{color:#4CAF50;}
+.weight-diff.bad{color:var(--red);}
+.progress-wrap{margin:8px 0;}
+.progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;}
+.progress-track{background:#1A1A1A;border-radius:4px;height:8px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--accent));border-radius:4px;transition:width 0.5s;}
+
+.copy-btn{display:block;width:100%;background:var(--red);color:white;border:none;border-radius:12px;padding:18px;font-family:'Bebas Neue','Arial Black',sans-serif;font-size:22px;letter-spacing:3px;cursor:pointer;margin-top:14px;transition:all 0.2s;}
+.copy-btn:active{opacity:0.85;transform:scale(0.98);}
+.preview-box{background:#0D1F0D;border:1px solid #1A3D1A;border-radius:12px;padding:16px;margin-top:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:#B8E6B8;}
+
+canvas{width:100% !important;max-width:100%;}
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;}
+.chart-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
+.chart-section-header{font-size:12px;color:var(--accent);font-weight:700;margin:16px 0 8px;padding-left:4px;border-left:3px solid var(--accent);}
+
+.history-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.history-date{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:16px;color:var(--red);margin-bottom:4px;}
+.history-body{color:#aaa;line-height:1.7;white-space:pre-wrap;font-size:12px;}
+.delete-btn{background:none;border:1px solid #333;color:#555;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-top:6px;}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:#4CAF50;color:white;padding:12px 24px;border-radius:24px;font-size:14px;transition:transform 0.3s;z-index:999;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+.input-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.input-row label{font-size:13px;flex:1;color:var(--text);}
+.num-input{background:#1A1A1A;border:1px solid var(--border);color:white;border-radius:8px;padding:8px 10px;font-size:14px;font-family:'Bebas Neue','Arial Black',sans-serif;text-align:center;width:88px;}
+.num-input:focus{outline:none;border-color:var(--red);}
+input[type=date]{background:#1A1A1A;border:1px solid var(--border);color:white;border-radius:8px;padding:8px 12px;font-size:14px;font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;flex:1;}
+input[type=date]:focus{outline:none;border-color:var(--red);}
+
+.sleep-summary{font-size:13px;color:#42A5F5;text-align:center;margin-top:8px;font-weight:700;min-height:18px;}
+
+/* BODY MEASUREMENTS GRID */
+.measure-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.measure-item{background:#0D0D0D;border:1px solid var(--border);border-radius:10px;padding:10px;}
+.measure-label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.measure-input-wrap{display:flex;align-items:center;gap:4px;}
+.measure-input{background:#1A1A1A;border:1px solid var(--border);color:white;border-radius:6px;padding:6px 8px;font-size:15px;font-family:'Bebas Neue','Arial Black',sans-serif;text-align:center;width:100%;}
+.measure-input:focus{outline:none;border-color:var(--red);}
+.measure-unit{font-size:11px;color:var(--muted);white-space:nowrap;}
+
+/* BMI display */
+.bmi-display{text-align:center;padding:8px;background:#0D0D0D;border-radius:10px;border:1px solid var(--border);}
+.bmi-num{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:40px;color:var(--accent);}
+.bmi-label{font-size:12px;color:var(--muted);}
+
+/* SETTINGS MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:380px;margin:auto;}
+.modal h2{font-family:'Bebas Neue','Arial Black',sans-serif;font-size:20px;color:var(--red);margin-bottom:14px;letter-spacing:2px;}
+.modal-btn{width:100%;padding:13px;border-radius:10px;background:var(--red);color:white;border:none;font-family:'Bebas Neue','Arial Black',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer;margin-top:8px;}
+.modal-close{float:right;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;}
+</style>
+</head>
+<body>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSettings()">とじる</button>
+    <h2>⚙️ 初期設定</h2>
+    <div class="input-row"><label>スタート日</label><input type="date" id="cfg-start-date"></div>
+    <div class="input-row"><label>全期間（日数）</label><input type="number" class="num-input" id="cfg-total-days" min="1" max="999" style="width:80px"><span style="font-size:13px;color:var(--muted)">日間</span></div>
+    <div class="input-row"><label>開始時の体重 (kg)</label><input type="number" class="num-input" id="cfg-start-weight" step="0.1"></div>
+    <div class="input-row"><label>目標減量 (kg)</label><input type="number" class="num-input" id="cfg-goal-kg" step="0.1"></div>
+    <div class="input-row"><label>身長 (cm) ※BMI自動計算</label><input type="number" class="num-input" id="cfg-height" step="0.1"></div>
+    <button class="modal-btn" onclick="saveSettings()">保存する</button>
+  </div>
+</div>
+
+<div class="header">
+  <h1>体調 LOG</h1>
+  <div class="day-badge" id="day-badge" onclick="openSettings()">-- 日目 / -- 日 ⚙️</div>
+  <div class="date-nav">
+    <button onclick="prevDay()">◀</button>
+    <div class="date-label" id="date-label">---</div>
+    <button onclick="nextDay()">▶</button>
+  </div>
+  <div class="today-indicator" id="today-indicator">📅 今日</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('input',this)">📝 入力</button>
+  <button class="tab-btn" onclick="switchTab('body',this)">📏 身体</button>
+  <button class="tab-btn" onclick="switchTab('study',this)">📚 活動</button>
+  <button class="tab-btn" onclick="switchTab('report',this)">📤 報告</button>
+  <button class="tab-btn" onclick="switchTab('graph',this)">📈 グラフ</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">🗓 履歴</button>
+</div>
+
+<!-- ===== INPUT TAB ===== -->
+<div id="tab-input" class="tab-content active">
+
+  <div class="section">
+    <div class="section-title">体重 / 体脂肪</div>
+    <div class="input-row"><label>体重 (kg)</label><input type="number" class="num-input" id="weight" step="0.1" placeholder="0.0" oninput="updateWeightDiff()"></div>
+    <div class="input-row" style="margin-bottom:0"><label>体脂肪率 (%)</label><input type="number" class="num-input" id="fat" step="0.1" placeholder="0.0"></div>
+    <div id="weight-diff-display" class="weight-diff"></div>
+    <div class="progress-wrap" id="progress-wrap" style="display:none;margin-top:8px">
+      <div class="progress-label"><span>目標達成率</span><span id="progress-pct">0%</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-label" style="margin-top:4px"><span id="progress-lost">減量: 0kg</span><span id="progress-remain">残り: --kg</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">睡眠</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">😴 入眠時間</div>
+    <div class="time-grid" id="sleep-start-grid"></div>
+    <div id="sleep-start-custom" style="font-size:11px;color:#666;text-align:right;min-height:14px"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px;margin-top:10px">☀️ 起床時間</div>
+    <div class="time-grid" id="sleep-end-grid"></div>
+    <div id="sleep-end-custom" style="font-size:11px;color:#666;text-align:right;min-height:14px"></div>
+    <div class="sleep-summary" id="sleep-summary"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">水分量</div>
+    <div class="water-total">
+      <div class="water-big"><span id="water-l">0.0</span> <span>L</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px" id="water-ml">0 ml</div>
+    </div>
+    <div class="water-btn-row">
+      <button class="water-add-btn" onclick="addWater(200)">＋200ml</button>
+      <button class="water-add-btn" onclick="addWater(300)">＋300ml</button>
+      <button class="water-add-btn" onclick="addWater(500)">＋500ml</button>
+    </div>
+    <div class="chip-row" id="water-log"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">お通じ</div>
+    <div class="big-count count-green"><span id="tsuji-count">0</span> <span style="font-size:14px;color:var(--muted)">回</span></div>
+    <button class="action-btn btn-green" onclick="addTsuji()">🚽 あった！</button>
+    <div class="chip-row" id="tsuji-log"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">運動 — ウォーキング</div>
+    <div class="big-count count-orange"><span id="walk-total">0</span> <span style="font-size:14px;color:var(--muted)">分</span></div>
+    <div class="walk-btn-row">
+      <button class="walk-min-btn" onclick="addWalk(10)">＋10分</button>
+      <button class="walk-min-btn" onclick="addWalk(15)">＋15分</button>
+      <button class="walk-min-btn" onclick="addWalk(20)">＋20分</button>
+    </div>
+    <div class="chip-row" id="walk-log"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">運動 — その他</div>
+    <div class="big-count count-purple"><span id="ex-total">0</span> <span style="font-size:14px;color:var(--muted)">分</span></div>
+    <div class="toggle-grid" id="exercise-types" style="margin-bottom:12px">
+      <button class="toggle-btn" onclick="toggleExercise(this,'ライザップ')">💪 ライザップ</button>
+      <button class="toggle-btn" onclick="toggleExercise(this,'ランニング')">🏃 ランニング</button>
+      <button class="toggle-btn" onclick="toggleExercise(this,'自転車')">🚴 自転車</button>
+      <button class="toggle-btn" onclick="toggleExercise(this,'ストレッチ')">🧘 ストレッチ</button>
+      <button class="toggle-btn" onclick="toggleExercise(this,'筋トレ')">🏋️ 筋トレ</button>
+      <button class="toggle-btn" onclick="toggleExercise(this,'休息日')">💤 休息日</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">時間を追加</div>
+    <div class="toggle-grid" style="margin-bottom:10px">
+      <button class="toggle-btn" onclick="addExTime(15)">＋15分</button>
+      <button class="toggle-btn" onclick="addExTime(30)">＋30分</button>
+      <button class="toggle-btn" onclick="addExTime(45)">＋45分</button>
+      <button class="toggle-btn" onclick="addExTime(60)">＋1時間</button>
+      <button class="toggle-btn" onclick="addExTime(90)">＋1.5時間</button>
+    </div>
+    <div class="chip-row" id="ex-log"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">体調</div>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px">今日の体調は？</div>
+    <div class="star-row">
+      <span class="star" onclick="setCondition(1)">😩</span>
+      <span class="star" onclick="setCondition(2)">😕</span>
+      <span class="star" onclick="setCondition(3)">😊</span>
+      <span class="star" onclick="setCondition(4)">😄</span>
+      <span class="star" onclick="setCondition(5)">🔥</span>
+    </div>
+    <div id="condition-label" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">タップして選択</div>
+    <div class="toggle-grid" style="margin-bottom:10px">
+      <button class="toggle-btn" onclick="toggleSymptom(this,'疲れ気味')">疲れ気味</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'上半身筋肉痛')">上半身筋肉痛</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'下半身筋肉痛')">下半身筋肉痛</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'生理中')">生理中</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'食欲なし')">食欲なし</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'頭痛')">頭痛</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'元気！')">元気！</button>
+      <button class="toggle-btn" onclick="toggleSymptom(this,'やる気満々')">やる気満々</button>
+    </div>
+    <textarea id="memo" placeholder="その他メモ（食事・気分など）"></textarea>
+  </div>
+
+  <button class="copy-btn" onclick="saveAndGoReport()">📤 報告文を作成する</button>
+</div>
+
+<!-- ===== BODY MEASUREMENTS TAB ===== -->
+<div id="tab-body" class="tab-content">
+
+  <div class="section">
+    <div class="section-title">体組成</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="measure-item">
+        <div class="measure-label">脂肪量 (kg)</div>
+        <div class="measure-input-wrap"><input type="number" class="measure-input" id="m-fat-mass" step="0.1" placeholder="--"></div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-label">筋肉量 (kg)</div>
+        <div class="measure-input-wrap"><input type="number" class="measure-input" id="m-muscle" step="0.1" placeholder="--"></div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-label">内臓脂肪レベル</div>
+        <div class="measure-input-wrap"><input type="number" class="measure-input" id="m-visceral" step="1" placeholder="--"></div>
+      </div>
+      <div class="bmi-display">
+        <div class="bmi-label">BMI (自動計算)</div>
+        <div class="bmi-num" id="bmi-display">--</div>
+        <div class="bmi-label" id="bmi-cat"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">身体サイズ (cm)</div>
+    <div class="measure-grid">
+      <div class="measure-item"><div class="measure-label">首周り</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-neck" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">バスト</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-bust" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">二の腕 右</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-arm-r" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">二の腕 左</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-arm-l" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">ウエスト</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-waist" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">おへそ周り</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-navel" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">ヒップ</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-hip" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">太もも 右</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-thigh-r" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">太もも 左</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-thigh-l" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">ふくらはぎ 右</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-calf-r" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+      <div class="measure-item"><div class="measure-label">ふくらはぎ 左</div><div class="measure-input-wrap"><input type="number" class="measure-input" id="m-calf-l" step="0.1" placeholder="--"><span class="measure-unit">cm</span></div></div>
+    </div>
+  </div>
+
+  <button class="copy-btn" style="background:#1A3A1A;color:#8BC34A;font-size:18px" onclick="saveBodyMeasurements()">💾 身体測定を保存する</button>
+</div>
+
+<!-- ===== STUDY / ACTIVITY TAB ===== -->
+<div id="tab-study" class="tab-content">
+
+  <div class="section">
+    <div class="section-title">勉強 📚</div>
+    <div id="study-activities"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">動画作成 🎥</div>
+    <div id="video-activities"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">ブログ ✏️</div>
+    <div id="blog-activities"></div>
+  </div>
+
+</div>
+
+<!-- ===== REPORT TAB ===== -->
+<div id="tab-report" class="tab-content">
+  <div class="section">
+    <div class="section-title">今日の報告文</div>
+    <div class="preview-box" id="report-preview">「📝 入力」タブで記録後、「報告文を作成する」を押してください</div>
+    <button class="copy-btn" onclick="copyReport()">📋 コピーしてLINEで送る</button>
+  </div>
+</div>
+
+<!-- ===== GRAPH TAB ===== -->
+<div id="tab-graph" class="tab-content">
+  <div class="chart-section-header">⚖️ 健康・運動</div>
+  <div class="chart-wrap"><div class="chart-title">体重 / 体脂肪率</div><canvas id="chart-weight" height="180"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">水分量 (L)</div><canvas id="chart-water" height="130"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">睡眠時間 (h)</div><canvas id="chart-sleep" height="130"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">ウォーキング (分)</div><canvas id="chart-walk" height="130"></canvas></div>
+
+  <div class="chart-section-header">📏 身体測定</div>
+  <div class="chart-wrap"><div class="chart-title">体組成 (kg)</div><canvas id="chart-body-comp" height="160"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">BMI / 内臓脂肪レベル</div><canvas id="chart-bmi" height="140"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">ウエスト / ヒップ / おへそ (cm)</div><canvas id="chart-waist" height="140"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">バスト / 首 (cm)</div><canvas id="chart-bust" height="140"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">太もも 右/左 (cm)</div><canvas id="chart-thigh" height="130"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">ふくらはぎ 右/左 (cm)</div><canvas id="chart-calf" height="130"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">二の腕 右/左 (cm)</div><canvas id="chart-arm" height="130"></canvas></div>
+
+  <div class="chart-section-header">📚 勉強・活動</div>
+  <div class="chart-wrap"><div class="chart-title">勉強時間 (分)</div><canvas id="chart-study" height="160"></canvas></div>
+  <div class="chart-wrap"><div class="chart-title">動画作成 / ブログ (分)</div><canvas id="chart-creative" height="140"></canvas></div>
+</div>
+
+<!-- ===== HISTORY TAB ===== -->
+<div id="tab-history" class="tab-content">
+  <div id="history-list"><div style="text-align:center;color:var(--muted);padding:40px;font-size:13px">まだ記録がありません</div></div>
+</div>
+
+<div class="toast" id="toast">コピーしました！LINEで貼り付けてください ✓</div>
+
+<script>
+/* Lightweight inline chart engine - Chart.js API互換 オフライン対応 */
+(function(g){
+  function hexRgb(h){
+    var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+    return r?'rgb('+parseInt(r[1],16)+','+parseInt(r[2],16)+','+parseInt(r[3],16)+')':h;
+  }
+  function Chart(canvas, cfg){
+    this.c = canvas;
+    this.cfg = cfg;
+    this._render();
+  }
+  Chart.prototype.destroy = function(){
+    var ctx = this.c.getContext('2d');
+    ctx.clearRect(0,0,this.c.width,this.c.height);
+  };
+  Chart.prototype._render = function(){
+    var cv=this.c, cfg=this.cfg;
+    var labels=cfg.data.labels||[], ds=cfg.data.datasets||[], opts=cfg.options||{};
+    var W=cv.parentElement?cv.parentElement.clientWidth||320:320;
+    var H=cv.height||160;
+    cv.width=W; cv.height=H;
+    var ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,W,H);
+    var PL=48,PR=10,PT=16,PB=30,CW=W-PL-PR,CH=H-PT-PB;
+
+    if(!labels.length){
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';ctx.textAlign='center';
+      ctx.fillText('データなし',W/2,H/2);return;
+    }
+    var all=[];
+    ds.forEach(function(d){
+      (d.data||[]).forEach(function(v){if(v!=null&&!isNaN(v))all.push(+v);});
+    });
+    if(!all.length){
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';ctx.textAlign='center';
+      ctx.fillText('データなし',W/2,H/2);return;
+    }
+    var scaleY = opts.scales && opts.scales.y;
+    var mn = scaleY && scaleY.min!=null ? scaleY.min : null;
+    var rMin=Math.min.apply(null,all), rMax=Math.max.apply(null,all);
+    var yLo=mn!=null?mn:rMin, yHi=rMax;
+    if(yLo===yHi){yLo-=1;yHi+=1;}
+    var pad=(yHi-yLo)*0.12; yLo-=pad; yHi+=pad;
+    var yR=yHi-yLo;
+    var tx=function(i){return PL+(i/Math.max(labels.length-1,1))*CW;};
+    var ty=function(v){return PT+CH-((v-yLo)/yR)*CH;};
+
+    /* grid lines */
+    [0,0.25,0.5,0.75,1].forEach(function(f){
+      var y=PT+f*CH, val=yHi-f*yR;
+      ctx.strokeStyle='#1E1E1E';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(W-PR,y);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='9px sans-serif';ctx.textAlign='right';
+      var str=val>100?val.toFixed(0):val.toFixed(1);
+      ctx.fillText(str,PL-3,y+3);
+    });
+
+    /* x-axis labels */
+    ctx.fillStyle='#555';ctx.font='9px sans-serif';ctx.textAlign='center';
+    var maxL=8, step=Math.max(1,Math.floor(labels.length/maxL));
+    labels.forEach(function(l,i){
+      if(i%step===0||i===labels.length-1) ctx.fillText(l,tx(i),H-5);
+    });
+
+    /* datasets */
+    ds.forEach(function(d){
+      var data=d.data||[], col=hexRgb(d.borderColor||'#42A5F5');
+      var bg=d.backgroundColor||col.replace('rgb','rgba').replace(')',',0.1)');
+      var pts=[];
+      data.forEach(function(v,i){if(v!=null&&!isNaN(v))pts.push({i:i,v:+v});});
+      if(!pts.length)return;
+
+      /* fill area */
+      if(pts.length>1){
+        ctx.beginPath();
+        ctx.moveTo(tx(pts[0].i),ty(pts[0].v));
+        for(var k=1;k<pts.length;k++){
+          var mx=(tx(pts[k-1].i)+tx(pts[k].i))/2;
+          ctx.bezierCurveTo(mx,ty(pts[k-1].v),mx,ty(pts[k].v),tx(pts[k].i),ty(pts[k].v));
+        }
+        ctx.lineTo(tx(pts[pts.length-1].i),PT+CH);
+        ctx.lineTo(tx(pts[0].i),PT+CH);
+        ctx.closePath();
+        ctx.fillStyle=bg;ctx.fill();
+      }
+
+      /* line */
+      if(pts.length>1){
+        ctx.beginPath();
+        ctx.strokeStyle=col;ctx.lineWidth=d.borderWidth||2;ctx.lineJoin='round';
+        ctx.moveTo(tx(pts[0].i),ty(pts[0].v));
+        for(var k=1;k<pts.length;k++){
+          var mx=(tx(pts[k-1].i)+tx(pts[k].i))/2;
+          ctx.bezierCurveTo(mx,ty(pts[k-1].v),mx,ty(pts[k].v),tx(pts[k].i),ty(pts[k].v));
+        }
+        ctx.stroke();
+      }
+
+      /* dots */
+      var r=d.pointRadius||3;
+      pts.forEach(function(p){
+        ctx.beginPath();ctx.arc(tx(p.i),ty(p.v),r,0,Math.PI*2);
+        ctx.fillStyle=col;ctx.fill();
+        ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.stroke();
+      });
+    });
+
+    /* legend */
+    var legend = opts.plugins && opts.plugins.legend;
+    if(legend && legend.display!==false && ds.length>1){
+      var lx=PL, ly=6;
+      ds.forEach(function(d){
+        if(!d.label)return;
+        ctx.fillStyle=hexRgb(d.borderColor||'#42A5F5');
+        ctx.fillRect(lx,ly,10,3);
+        ctx.fillStyle='#999';ctx.font='9px sans-serif';ctx.textAlign='left';
+        ctx.fillText(d.label,lx+13,ly+4);
+        lx+=ctx.measureText(d.label).width+26;
+      });
+    }
+  };
+  g.Chart=Chart;
+})(window);
+
+</script>
+<script>
+// ============================================================
+// STORAGE
+// ============================================================
+const CFG_KEY = 'taicho_cfg_v2';
+const LOGS_KEY = 'taicho_logs_v5';
+
+function getCfg() { try { return JSON.parse(localStorage.getItem(CFG_KEY)||'null'); } catch(e) { return null; } }
+function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+function getLogs() { try { return JSON.parse(localStorage.getItem(LOGS_KEY)||'[]'); } catch(e) { return []; } }
+function saveLogsDB(l) { localStorage.setItem(LOGS_KEY, JSON.stringify(l)); }
+
+// ============================================================
+// ACTIVITY DEFINITIONS
+// ============================================================
+const ACTIVITIES = [
+  { id:'study-sozoku',    label:'相続税',       chipClass:'study-chip',  parent:'study-activities'  },
+  { id:'study-boki',      label:'簿記論',       chipClass:'study-chip',  parent:'study-activities'  },
+  { id:'study-zaimushohyo', label:'財務諸表論', chipClass:'study-chip',  parent:'study-activities'  },
+  { id:'video-azarashi',  label:'動画作成🎥 あざらし🦭',  chipClass:'video-chip',  parent:'video-activities'  },
+  { id:'video-jimu',      label:'動画作成🎥 じむこ🏃‍♀️', chipClass:'video-chip',  parent:'video-activities'  },
+  { id:'blog',            label:'ブログ✏️',    chipClass:'blog-chip',   parent:'blog-activities'   },
+];
+
+// ============================================================
+// DATE HELPERS
+// ============================================================
+let currentDateKey = todayKey();
+
+function todayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function dk2date(dk) { return new Date(dk+'T00:00:00'); }
+function fmtDate(dk) { const d=dk2date(dk); const w=['日','月','火','水','木','金','土'][d.getDay()]; return `${d.getMonth()+1}月${d.getDate()}日(${w})`; }
+function shiftDk(dk,n) {
+  const d=dk2date(dk); d.setDate(d.getDate()+n);
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+// ============================================================
+// SESSION STATE
+// ============================================================
+let st = {};
+function resetState() {
+  st = {
+    sleepStart:'', sleepEnd:'',
+    waterLog:[], tsujiLog:[], walkLog:[],
+    exLog:[], exercises:[],
+    condition:0, symptoms:[], memo:'',
+    // activity logs: id -> [{min, time}]
+    actLogs: Object.fromEntries(ACTIVITIES.map(a=>[a.id,[]])),
+    // body measurements
+    body: {}
+  };
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  currentDateKey = todayKey();
+  buildSleepGrids();
+  buildActivityRows();
+  const cfg = getCfg();
+  if (!cfg) {
+    document.getElementById('cfg-start-date').value = '2025-01-14';
+    document.getElementById('cfg-total-days').value = '150';
+    document.getElementById('cfg-goal-kg').value = '22';
+    openSettings();
+  } else {
+    loadDayData(currentDateKey);
+    updateHeader();
+  }
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function openSettings() {
+  const cfg=getCfg();
+  if (cfg) {
+    document.getElementById('cfg-start-date').value=cfg.startDate||'';
+    document.getElementById('cfg-total-days').value=cfg.totalDays||150;
+    document.getElementById('cfg-start-weight').value=cfg.startWeight||'';
+    document.getElementById('cfg-goal-kg').value=cfg.goalKg||22;
+    document.getElementById('cfg-height').value=cfg.height||'';
+  }
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+function saveSettings() {
+  const startDate = document.getElementById('cfg-start-date').value;
+  if (!startDate) { alert('スタート日を入力してください'); return; }
+  const cfg = {
+    startDate,
+    totalDays: parseInt(document.getElementById('cfg-total-days').value)||150,
+    startWeight: parseFloat(document.getElementById('cfg-start-weight').value)||0,
+    goalKg: parseFloat(document.getElementById('cfg-goal-kg').value)||22,
+    height: parseFloat(document.getElementById('cfg-height').value)||0
+  };
+  saveCfg(cfg);
+  closeSettings();
+  updateHeader();
+  updateBMI();
+  updateWeightDiff();
+}
+function updateHeader() {
+  const cfg=getCfg(); if(!cfg) return;
+  const start=dk2date(cfg.startDate), cur=dk2date(currentDateKey);
+  const dayNum=Math.floor((cur-start)/(1000*60*60*24))+1;
+  document.getElementById('day-badge').textContent=`${dayNum}日目 / ${cfg.totalDays}日 ⚙️`;
+  document.getElementById('date-label').textContent=fmtDate(currentDateKey);
+  document.getElementById('today-indicator').style.display=currentDateKey===todayKey()?'block':'none';
+}
+
+// ============================================================
+// DATE NAV
+// ============================================================
+function prevDay() { saveCurrent(); currentDateKey=shiftDk(currentDateKey,-1); loadDayData(currentDateKey); updateHeader(); }
+function nextDay() { saveCurrent(); currentDateKey=shiftDk(currentDateKey, 1); loadDayData(currentDateKey); updateHeader(); }
+
+// ============================================================
+// LOAD / SAVE
+// ============================================================
+function loadDayData(dk) {
+  resetState();
+  const entry = getLogs().find(l=>l.date===dk);
+  if (entry) {
+    st.sleepStart=entry.sleepStart||''; st.sleepEnd=entry.sleepEnd||'';
+    st.waterLog=entry.waterLog||[]; st.tsujiLog=entry.tsujiLog||[];
+    st.walkLog=entry.walkLog||[]; st.exLog=entry.exLog||[];
+    st.exercises=entry.exercises||[];
+    st.condition=entry.condition||0; st.symptoms=entry.symptoms||[];
+    st.memo=entry.memo||'';
+    st.actLogs=entry.actLogs||Object.fromEntries(ACTIVITIES.map(a=>[a.id,[]]));
+    st.body=entry.body||{};
+  }
+  document.getElementById('weight').value=entry?.weight||'';
+  document.getElementById('fat').value=entry?.fat||'';
+  document.getElementById('memo').value=st.memo;
+  restoreUI();
+  renderAll();
+  loadBodyFields();
+  updateBMI();
+  updateWeightDiff();
+}
+
+function saveCurrent() {
+  st.memo = document.getElementById('memo').value;
+  collectBodyFields();
+  const w=parseFloat(document.getElementById('weight').value)||null;
+  const f=parseFloat(document.getElementById('fat').value)||null;
+  const cfg=getCfg();
+  const logs=getLogs().filter(l=>l.date!==currentDateKey);
+  if (cfg&&!cfg.startWeight&&w) { cfg.startWeight=w; saveCfg(cfg); }
+  const totalMl=st.waterLog.reduce((s,e)=>s+e.ml,0);
+  const walkMin=st.walkLog.reduce((s,e)=>s+e.min,0);
+  const exMin=st.exLog.reduce((s,e)=>s+e.min,0);
+  const actMins=Object.fromEntries(ACTIVITIES.map(a=>[a.id, (st.actLogs[a.id]||[]).reduce((s,e)=>s+e.min,0)]));
+  logs.push({
+    date:currentDateKey, weight:w, fat:f,
+    water:totalMl/1000, waterLog:[...st.waterLog],
+    tsujiLog:[...st.tsujiLog],
+    walkMin, walkLog:[...st.walkLog],
+    exMin, exLog:[...st.exLog],
+    exercises:[...st.exercises],
+    sleepStart:st.sleepStart, sleepEnd:st.sleepEnd, sleepH:getSleepH(),
+    condition:st.condition, symptoms:[...st.symptoms],
+    memo:st.memo, report:buildReport(),
+    actLogs:{...Object.fromEntries(ACTIVITIES.map(a=>[a.id,[...(st.actLogs[a.id]||[])]]))},
+    actMins,
+    body:{...st.body}
+  });
+  logs.sort((a,b)=>a.date.localeCompare(b.date));
+  saveLogsDB(logs);
+}
+
+function restoreUI() {
+  // sleep buttons
+  ['sleep-start-grid','sleep-end-grid'].forEach(gridId => {
+    const side = gridId.includes('start')?'start':'end';
+    const val = side==='start'?st.sleepStart:st.sleepEnd;
+    document.querySelectorAll(`#${gridId} .time-btn`).forEach(b=>b.classList.toggle('selected',b.textContent===val));
+    const customEl = document.getElementById(`sleep-${side}-custom`);
+    if (val && !document.querySelector(`#${gridId} .time-btn.selected`)) customEl.textContent='入力: '+val;
+    else customEl.textContent='';
+  });
+  updateSleepSummary();
+  // exercises
+  document.querySelectorAll('#exercise-types .toggle-btn').forEach(b=>{
+    b.classList.remove('selected');
+    ACTIVITIES; // just to avoid unused warning
+    if (st.exercises.some(e=>b.textContent.includes(e.replace(/[💪🏃🚴🧘🏋️💤]/g,'').trim()))) b.classList.add('selected');
+  });
+  document.querySelectorAll('#exercise-types .toggle-btn').forEach(b=>b.classList.remove('selected'));
+  st.exercises.forEach(ex=>{ document.querySelectorAll('#exercise-types .toggle-btn').forEach(b=>{ if(b.textContent.includes(ex)) b.classList.add('selected'); }); });
+  // symptoms
+  document.querySelectorAll('.toggle-btn[data-symptom]').forEach(b=>{
+    b.classList.toggle('selected', st.symptoms.includes(b.dataset.symptom));
+  });
+  // condition
+  const condL=['','最悪😩','つらい😕','普通😊','良好😄','最高🔥'];
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('active',i<st.condition));
+  document.getElementById('condition-label').textContent=st.condition>0?condL[st.condition]:'タップして選択';
+}
+
+// Fix symptom buttons to use data attribute
+document.querySelectorAll('.toggle-btn[onclick*="toggleSymptom"]').forEach(b=>{
+  const m=b.getAttribute('onclick').match(/'([^']+)'\)/);
+  if(m) b.dataset.symptom=m[1];
+});
+
+function renderAll() {
+  renderWater(); renderTsuji(); renderWalk(); renderExLog();
+  ACTIVITIES.forEach(a=>renderActivity(a));
+}
+
+// ============================================================
+// SLEEP
+// ============================================================
+function buildSleepGrids() {
+  const sg=document.getElementById('sleep-start-grid');
+  // 22:00〜3:30 (30分刻み)
+  for (let m=22*60; m<=27*60+30; m+=30) {
+    const h=Math.floor(m/60)%24, min=m%60;
+    const lbl=`${h}:${String(min).padStart(2,'0')}`;
+    const b=document.createElement('button'); b.className='time-btn'; b.textContent=lbl;
+    b.onclick=function(){selectSleepTime('start',lbl,this);}; sg.appendChild(b);
+  }
+  const bs=document.createElement('button'); bs.className='time-btn'; bs.textContent='その他';
+  bs.onclick=()=>promptTime('start'); sg.appendChild(bs);
+
+  const eg=document.getElementById('sleep-end-grid');
+  for (let m=6*60; m<=10*60; m+=30) {
+    const h=Math.floor(m/60), min=m%60;
+    const lbl=`${h}:${String(min).padStart(2,'0')}`;
+    const b=document.createElement('button'); b.className='time-btn'; b.textContent=lbl;
+    b.onclick=function(){selectSleepTime('end',lbl,this);}; eg.appendChild(b);
+  }
+  const be=document.createElement('button'); be.className='time-btn'; be.textContent='その他';
+  be.onclick=()=>promptTime('end'); eg.appendChild(be);
+}
+function selectSleepTime(side,val,btn) {
+  const gid=side==='start'?'sleep-start-grid':'sleep-end-grid';
+  document.querySelectorAll(`#${gid} .time-btn`).forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if(side==='start'){st.sleepStart=val;document.getElementById('sleep-start-custom').textContent='';}
+  else{st.sleepEnd=val;document.getElementById('sleep-end-custom').textContent='';}
+  updateSleepSummary();
+}
+function promptTime(side) {
+  const v=prompt('時間を入力（例: 0:30）'); if(!v) return;
+  if(side==='start'){st.sleepStart=v;document.getElementById('sleep-start-custom').textContent='入力: '+v;document.querySelectorAll('#sleep-start-grid .time-btn').forEach(b=>b.classList.remove('selected'));}
+  else{st.sleepEnd=v;document.getElementById('sleep-end-custom').textContent='入力: '+v;document.querySelectorAll('#sleep-end-grid .time-btn').forEach(b=>b.classList.remove('selected'));}
+  updateSleepSummary();
+}
+function toMin(s){if(!s)return 0;const[h,m]=s.split(':').map(Number);return h*60+(m||0);}
+function updateSleepSummary() {
+  if(!st.sleepStart||!st.sleepEnd){document.getElementById('sleep-summary').textContent='';return;}
+  let s=toMin(st.sleepStart),e=toMin(st.sleepEnd);
+  if(e<=s)e+=1440;
+  const dur=e-s,h=Math.floor(dur/60),m=dur%60;
+  document.getElementById('sleep-summary').textContent=`😴 ${st.sleepStart} 就寝 → ☀️ ${st.sleepEnd} 起床　|　${h}時間${m>0?m+'分':''}`;
+}
+function getSleepH(){
+  if(!st.sleepStart||!st.sleepEnd)return null;
+  let s=toMin(st.sleepStart),e=toMin(st.sleepEnd);
+  if(e<=s)e+=1440; return(e-s)/60;
+}
+
+// ============================================================
+// WATER / TSUJI / WALK / EXERCISE
+// ============================================================
+function nowTime(){const d=new Date();return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;}
+
+function addWater(ml){st.waterLog.push({ml,time:nowTime()});renderWater();}
+function removeWater(i){st.waterLog.splice(i,1);renderWater();}
+function renderWater(){
+  const total=st.waterLog.reduce((s,e)=>s+e.ml,0);
+  document.getElementById('water-l').textContent=(total/1000).toFixed(1);
+  document.getElementById('water-ml').textContent=`${total} ml`;
+  const c=document.getElementById('water-log');
+  c.innerHTML=st.waterLog.length===0?'<span style="font-size:12px;color:var(--muted)">まだ記録なし</span>':
+    st.waterLog.map((e,i)=>`<div class="chip water-chip">💧 ${e.ml}ml <small style="color:#5A8AA8">${e.time}</small><button onclick="removeWater(${i})">×</button></div>`).join('');
+}
+
+function addTsuji(){st.tsujiLog.push({time:nowTime()});renderTsuji();}
+function removeTsuji(i){st.tsujiLog.splice(i,1);renderTsuji();}
+function renderTsuji(){
+  document.getElementById('tsuji-count').textContent=st.tsujiLog.length;
+  const c=document.getElementById('tsuji-log');
+  c.innerHTML=st.tsujiLog.length===0?'<span style="font-size:12px;color:var(--muted)">まだ記録なし</span>':
+    st.tsujiLog.map((e,i)=>`<div class="chip tsuji-chip">🚽 ${e.time}<button onclick="removeTsuji(${i})">×</button></div>`).join('');
+}
+
+function addWalk(min){st.walkLog.push({min,time:nowTime()});renderWalk();}
+function removeWalk(i){st.walkLog.splice(i,1);renderWalk();}
+function renderWalk(){
+  const total=st.walkLog.reduce((s,e)=>s+e.min,0);
+  document.getElementById('walk-total').textContent=total;
+  const c=document.getElementById('walk-log');
+  c.innerHTML=st.walkLog.length===0?'<span style="font-size:12px;color:var(--muted)">まだ記録なし</span>':
+    st.walkLog.map((e,i)=>`<div class="chip walk-chip">🚶 ${e.min}分 <small style="color:#8A6030">${e.time}</small><button onclick="removeWalk(${i})">×</button></div>`).join('');
+}
+
+function toggleExercise(btn,val){
+  if(st.exercises.includes(val)){st.exercises=st.exercises.filter(e=>e!==val);btn.classList.remove('selected');}
+  else{st.exercises.push(val);btn.classList.add('selected');}
+}
+function addExTime(min){st.exLog.push({min,time:nowTime()});renderExLog();}
+function removeExLog(i){st.exLog.splice(i,1);renderExLog();}
+function renderExLog(){
+  const total=st.exLog.reduce((s,e)=>s+e.min,0);
+  document.getElementById('ex-total').textContent=total;
+  const c=document.getElementById('ex-log');
+  c.innerHTML=st.exLog.length===0?'<span style="font-size:12px;color:var(--muted)">まだ記録なし</span>':
+    st.exLog.map((e,i)=>{const lbl=e.min>=60?`${e.min/60}時間`:`${e.min}分`;return `<div class="chip ex-chip">💪 ${lbl} <small style="color:#6A4A8A">${e.time}</small><button onclick="removeExLog(${i})">×</button></div>`;}).join('');
+}
+
+// ============================================================
+// ACTIVITIES (STUDY / VIDEO / BLOG)
+// ============================================================
+function buildActivityRows() {
+  ACTIVITIES.forEach(a=>{
+    const parent=document.getElementById(a.parent);
+    const row=document.createElement('div');
+    row.className='activity-row';
+    row.innerHTML=`
+      <span class="activity-label">${a.label}</span>
+      <span class="activity-total" id="act-total-${a.id}">0</span>
+      <span class="activity-unit">分</span>
+      <button class="add30-btn" onclick="addActivity('${a.id}')">＋30分</button>`;
+    parent.appendChild(row);
+    // chip row
+    const chips=document.createElement('div');
+    chips.className='chip-row'; chips.id=`act-chips-${a.id}`;
+    chips.style.marginBottom='4px';
+    parent.appendChild(chips);
+  });
+}
+function addActivity(id){
+  if(!st.actLogs[id]) st.actLogs[id]=[];
+  st.actLogs[id].push({min:30,time:nowTime()});
+  renderActivity(ACTIVITIES.find(a=>a.id===id));
+}
+function removeActivity(id,i){
+  st.actLogs[id].splice(i,1);
+  renderActivity(ACTIVITIES.find(a=>a.id===id));
+}
+function renderActivity(a){
+  if(!a) return;
+  const logs=st.actLogs[a.id]||[];
+  const total=logs.reduce((s,e)=>s+e.min,0);
+  const totalEl=document.getElementById(`act-total-${a.id}`);
+  if(totalEl) totalEl.textContent=total;
+  const c=document.getElementById(`act-chips-${a.id}`);
+  if(!c) return;
+  c.innerHTML=logs.length===0?'<span style="font-size:11px;color:var(--muted)">まだ記録なし</span>':
+    logs.map((e,i)=>`<div class="chip ${a.chipClass}">30分 <small style="color:#4A6A8A">${e.time}</small><button onclick="removeActivity('${a.id}',${i})">×</button></div>`).join('');
+}
+
+// ============================================================
+// CONDITION
+// ============================================================
+function setCondition(val){
+  st.condition=val;
+  const L=['','最悪😩','つらい😕','普通😊','良好😄','最高🔥'];
+  document.getElementById('condition-label').textContent=L[val];
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('active',i<val));
+}
+function toggleSymptom(btn,val){
+  if(st.symptoms.includes(val)){st.symptoms=st.symptoms.filter(s=>s!==val);btn.classList.remove('selected');}
+  else{st.symptoms.push(val);btn.classList.add('selected');}
+  btn.dataset.symptom=val;
+}
+
+// ============================================================
+// WEIGHT / BMI
+// ============================================================
+function updateWeightDiff(){
+  const w=parseFloat(document.getElementById('weight').value);
+  const el=document.getElementById('weight-diff-display');
+  const pw=document.getElementById('progress-wrap');
+  const cfg=getCfg();
+  if(!w||!cfg){el.textContent='';pw.style.display='none';updateBMI();return;}
+  const sw=cfg.startWeight,goal=cfg.goalKg||22;
+  pw.style.display='block';
+  if(sw){
+    const lost=sw-w,pct=Math.min(100,Math.max(0,lost/goal*100));
+    document.getElementById('progress-pct').textContent=pct.toFixed(1)+'%';
+    document.getElementById('progress-fill').style.width=pct+'%';
+    document.getElementById('progress-lost').textContent=`減量: ${lost.toFixed(1)}kg`;
+    document.getElementById('progress-remain').textContent=`残り: ${Math.max(0,goal-lost).toFixed(1)}kg`;
+    el.textContent=lost>=0?`開始から -${lost.toFixed(1)}kg 🎉`:`開始から +${Math.abs(lost).toFixed(1)}kg`;
+    el.className='weight-diff '+(lost>=0?'good':'bad');
+  }
+  updateBMI();
+}
+function updateBMI(){
+  const cfg=getCfg(); if(!cfg||!cfg.height) return;
+  const w=parseFloat(document.getElementById('weight').value)||parseFloat(document.getElementById('m-fat-mass')?.value)||0;
+  if(!w) return;
+  const h=cfg.height/100;
+  const bmi=w/(h*h);
+  const el=document.getElementById('bmi-display');
+  const cat=document.getElementById('bmi-cat');
+  if(el){el.textContent=bmi.toFixed(1);}
+  if(cat){
+    if(bmi<18.5)cat.textContent='低体重';
+    else if(bmi<25)cat.textContent='普通体重';
+    else if(bmi<30)cat.textContent='肥満(1度)';
+    else cat.textContent='肥満(2度以上)';
+  }
+}
+
+// ============================================================
+// BODY MEASUREMENTS
+// ============================================================
+const BODY_FIELDS=[
+  'fat-mass','muscle','visceral',
+  'neck','bust','arm-r','arm-l','waist','navel','hip',
+  'thigh-r','thigh-l','calf-r','calf-l'
+];
+function loadBodyFields(){
+  BODY_FIELDS.forEach(f=>{
+    const el=document.getElementById('m-'+f);
+    if(el) el.value=st.body[f]||'';
+  });
+  updateBMI();
+}
+function collectBodyFields(){
+  BODY_FIELDS.forEach(f=>{
+    const el=document.getElementById('m-'+f);
+    if(el&&el.value!=='') st.body[f]=parseFloat(el.value)||null;
+    else if(el) delete st.body[f];
+  });
+}
+function saveBodyMeasurements(){
+  collectBodyFields(); saveCurrent();
+  showToast('身体測定を保存しました ✓');
+}
+
+// ============================================================
+// REPORT
+// ============================================================
+function buildReport(){
+  const d=dk2date(currentDateKey);
+  const w=['日','月','火','水','木','金','土'][d.getDay()];
+  const ds=`${d.getMonth()+1}/${d.getDate()}(${w})`;
+  const weight=document.getElementById('weight').value;
+  const fat=document.getElementById('fat').value;
+  const memo=document.getElementById('memo').value;
+  const totalMl=st.waterLog.reduce((s,e)=>s+e.ml,0);
+  const walkMin=st.walkLog.reduce((s,e)=>s+e.min,0);
+  const exMin=st.exLog.reduce((s,e)=>s+e.min,0);
+  const sleepH=getSleepH();
+  const durL=sleepH!==null?`${Math.floor(sleepH)}時間${Math.round((sleepH%1)*60)>0?Math.round((sleepH%1)*60)+'分':''}`:'—';
+  const condL=['','最悪','つらい','普通','良好','最高'];
+  const lines=[];
+  lines.push(`📋 【日次報告】${ds}`,'');
+  if(weight) lines.push(`⚖️ 体重: ${weight}kg${fat?` / 体脂肪: ${fat}%`:''}`);
+  lines.push(`😴 入眠: ${st.sleepStart||'—'} → 起床: ${st.sleepEnd||'—'} (${durL})`);
+  lines.push(`💧 水分: ${(totalMl/1000).toFixed(1)}L`);
+  // お通じ: あり/なし のみ
+  lines.push(`🚽 お通じ: ${st.tsujiLog.length>0?'あり':'なし'}`);
+  const exParts=[];
+  if(walkMin>0)exParts.push(`ウォーキング${walkMin}分`);
+  if(st.exercises.length>0)exParts.push(st.exercises.join('・'));
+  if(exMin>0)exParts.push(`その他${exMin}分`);
+  lines.push(`💪 運動: ${exParts.length>0?exParts.join(' / '):'なし'}`);
+  const cond=st.condition>0?condL[st.condition]:'—';
+  const sym=st.symptoms.length>0?` [${st.symptoms.join('・')}]`:'';
+  lines.push(`🌡️ 体調: ${cond}${sym}`);
+  if(memo)lines.push(`📝 メモ: ${memo}`);
+  return lines.join('\n');
+}
+
+function saveAndGoReport(){
+  st.memo=document.getElementById('memo').value;
+  saveCurrent();
+  document.getElementById('report-preview').textContent=buildReport();
+  switchTab('report',document.querySelectorAll('.tab-btn')[3]);
+  renderHistory();
+}
+function copyReport(){
+  const text=document.getElementById('report-preview').textContent;
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>showToast());}
+  else{const el=document.createElement('textarea');el.value=text;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);showToast();}
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  if(msg)t.textContent=msg;
+  else t.textContent='コピーしました！LINEで貼り付けてください ✓';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='graph'){saveCurrent();renderGraphs();}
+  if(name==='history'){renderHistory();}
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+function renderHistory(){
+  const logs=getLogs();
+  const el=document.getElementById('history-list');
+  if(!logs.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;font-size:13px">まだ記録がありません</div>';return;}
+  el.innerHTML=[...logs].reverse().map(l=>{
+    const d=dk2date(l.date);
+    const dow=['日','月','火','水','木','金','土'][d.getDay()];
+    const ds=`${d.getMonth()+1}/${d.getDate()}(${dow})`;
+    let detail=l.report||'';
+    if(l.tsujiLog&&l.tsujiLog.length>0) detail+=`\n🚽 お通じ時刻: ${l.tsujiLog.map(e=>e.time).join(' / ')}`;
+    if(l.walkLog&&l.walkLog.length>0) detail+=`\n🚶 ウォーキング: ${l.walkLog.map(e=>e.time+'('+e.min+'分)').join(' / ')}`;
+    const isCur=l.date===currentDateKey;
+    return `<div class="history-item" style="${isCur?'border-color:var(--red)':''}">
+      <div class="history-date">${ds}${l.weight?` — ${l.weight}kg`:''}${isCur?' 📍':''}</div>
+      <div class="history-body">${detail}</div>
+      <button class="delete-btn" onclick="deleteLog('${l.date}')">削除</button>
+    </div>`;
+  }).join('');
+}
+function deleteLog(date){
+  if(!confirm('この記録を削除しますか？'))return;
+  saveLogsDB(getLogs().filter(l=>l.date!==date));
+  renderHistory();renderGraphs();
+}
+
+// ============================================================
+// GRAPHS
+// ============================================================
+let charts={};
+function mk(id,datasets,minY,type){
+  const c=document.getElementById(id); if(!c)return;
+  if(charts[id])charts[id].destroy();
+  const gc='#1E1E1E',tc='#555';
+  charts[id]=new Chart(c,{
+    type:type||'line',
+    data:{labels,datasets},
+    options:{responsive:true,plugins:{legend:{display:datasets.length>1,labels:{color:'#999',font:{size:10}}}},
+      scales:{x:{ticks:{color:tc,font:{size:9},maxTicksLimit:8},grid:{color:gc}},y:{min:minY,ticks:{color:tc,font:{size:9}},grid:{color:gc}}}}
+  });
+}
+let labels=[];
+function renderGraphs(){
+  const logs=getLogs();
+  labels=logs.map(l=>{const d=dk2date(l.date);return`${d.getMonth()+1}/${d.getDate()}`;});
+  const def={borderWidth:2,pointRadius:3,tension:0.3,fill:true};
+
+  // Health
+  mk('chart-weight',[
+    {label:'体重(kg)',data:logs.map(l=>l.weight),borderColor:'#E8002D',backgroundColor:'rgba(232,0,45,0.08)',...def},
+    {label:'体脂肪(%)',data:logs.map(l=>l.fat),borderColor:'#FFD700',backgroundColor:'rgba(255,215,0,0.05)',...def}
+  ]);
+  mk('chart-water',[{label:'水分(L)',data:logs.map(l=>l.water),borderColor:'#42A5F5',backgroundColor:'rgba(66,165,245,0.12)',...def}],0);
+  mk('chart-sleep',[{label:'睡眠(h)',data:logs.map(l=>l.sleepH),borderColor:'#9C27B0',backgroundColor:'rgba(156,39,176,0.12)',...def}],0);
+  mk('chart-walk',[{label:'ウォーキング(分)',data:logs.map(l=>l.walkMin||0),borderColor:'#FF9800',backgroundColor:'rgba(255,152,0,0.12)',...def}],0);
+
+  // Body comp
+  mk('chart-body-comp',[
+    {label:'脂肪量(kg)',data:logs.map(l=>l.body?.['fat-mass']||null),borderColor:'#EF5350',backgroundColor:'rgba(239,83,80,0.08)',...def},
+    {label:'筋肉量(kg)',data:logs.map(l=>l.body?.muscle||null),borderColor:'#66BB6A',backgroundColor:'rgba(102,187,106,0.08)',...def}
+  ]);
+  mk('chart-bmi',[
+    {label:'BMI',data:logs.map(l=>{const cfg=getCfg();if(!l.weight||!cfg?.height)return null;const h=cfg.height/100;return+(l.weight/(h*h)).toFixed(1);}),borderColor:'#FFD700',backgroundColor:'rgba(255,215,0,0.1)',...def},
+    {label:'内臓脂肪Lv',data:logs.map(l=>l.body?.visceral||null),borderColor:'#FF7043',backgroundColor:'rgba(255,112,67,0.08)',...def}
+  ]);
+  mk('chart-waist',[
+    {label:'ウエスト',data:logs.map(l=>l.body?.waist||null),borderColor:'#26C6DA',backgroundColor:'rgba(38,198,218,0.08)',...def},
+    {label:'ヒップ',data:logs.map(l=>l.body?.hip||null),borderColor:'#AB47BC',backgroundColor:'rgba(171,71,188,0.05)',...def},
+    {label:'おへそ',data:logs.map(l=>l.body?.navel||null),borderColor:'#FFA726',backgroundColor:'rgba(255,167,38,0.05)',...def}
+  ]);
+  mk('chart-bust',[
+    {label:'バスト',data:logs.map(l=>l.body?.bust||null),borderColor:'#EC407A',backgroundColor:'rgba(236,64,122,0.08)',...def},
+    {label:'首周り',data:logs.map(l=>l.body?.neck||null),borderColor:'#78909C',backgroundColor:'rgba(120,144,156,0.08)',...def}
+  ]);
+  mk('chart-thigh',[
+    {label:'太もも右',data:logs.map(l=>l.body?.['thigh-r']||null),borderColor:'#42A5F5',backgroundColor:'rgba(66,165,245,0.08)',...def},
+    {label:'太もも左',data:logs.map(l=>l.body?.['thigh-l']||null),borderColor:'#90CAF9',backgroundColor:'rgba(144,202,249,0.05)',...def}
+  ]);
+  mk('chart-calf',[
+    {label:'ふくらはぎ右',data:logs.map(l=>l.body?.['calf-r']||null),borderColor:'#26A69A',backgroundColor:'rgba(38,166,154,0.08)',...def},
+    {label:'ふくらはぎ左',data:logs.map(l=>l.body?.['calf-l']||null),borderColor:'#80CBC4',backgroundColor:'rgba(128,203,196,0.05)',...def}
+  ]);
+  mk('chart-arm',[
+    {label:'二の腕右',data:logs.map(l=>l.body?.['arm-r']||null),borderColor:'#FFCA28',backgroundColor:'rgba(255,202,40,0.08)',...def},
+    {label:'二の腕左',data:logs.map(l=>l.body?.['arm-l']||null),borderColor:'#FFE082',backgroundColor:'rgba(255,224,130,0.05)',...def}
+  ]);
+
+  // Study / Activity
+  const studyColors=['#64B5F6','#4FC3F7','#4DD0E1'];
+  mk('chart-study',
+    ['study-sozoku','study-boki','study-zaimushohyo'].map((id,i)=>({
+      label:ACTIVITIES.find(a=>a.id===id)?.label||id,
+      data:logs.map(l=>l.actMins?.[id]||0),
+      borderColor:studyColors[i],
+      backgroundColor:studyColors[i].replace(')',',0.08)').replace('rgb','rgba'),
+      ...def
+    })),0);
+  mk('chart-creative',[
+    {label:'あざらし動画',data:logs.map(l=>l.actMins?.['video-azarashi']||0),borderColor:'#CE93D8',backgroundColor:'rgba(206,147,216,0.1)',...def},
+    {label:'じむこ動画',data:logs.map(l=>l.actMins?.['video-jimu']||0),borderColor:'#F48FB1',backgroundColor:'rgba(244,143,177,0.1)',...def},
+    {label:'ブログ',data:logs.map(l=>l.actMins?.['blog']||0),borderColor:'#A5D6A7',backgroundColor:'rgba(165,214,167,0.1)',...def}
+  ],0);
+}
+
+init();
+</script>
+</body>
+</html>
